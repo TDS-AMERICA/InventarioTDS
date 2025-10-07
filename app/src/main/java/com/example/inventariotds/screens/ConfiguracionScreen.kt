@@ -151,6 +151,8 @@ fun ConfiguracionScreen(navController: NavHostController) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { importarCsv(it, context, viewModel) }
     }
+    var mostrarResetLicencia by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(Unit) {
         viewModel.cargarMaestro(context)
@@ -188,7 +190,9 @@ fun ConfiguracionScreen(navController: NavHostController) {
             Image(
                 painter = painterResource(id = R.drawable.configuracion),
                 contentDescription = "configuracion",
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
                     .height(80.dp)
             )
 
@@ -234,10 +238,9 @@ fun ConfiguracionScreen(navController: NavHostController) {
                     Spacer(Modifier.height(12.dp))
 
                     CustomButton(text = "RESET LICENCIA") {
-                        scope.launch {
-                            resetLicencia(context, navController)
-                        }
+                        mostrarResetLicencia = true   // 👈 abre el diálogo
                     }
+
 
                     Spacer(Modifier.height(24.dp)) // margen final
                 }
@@ -278,6 +281,40 @@ fun ConfiguracionScreen(navController: NavHostController) {
                 Toast.makeText(context, "Datos borrados correctamente", Toast.LENGTH_SHORT).show()
             }
         )
+        if (mostrarResetLicencia) {
+            AlertDialog(
+                onDismissRequest = { mostrarResetLicencia = false },
+                title = { Text("Revocar licencia") },
+                text = {
+                    Text(
+                        "Al confirmar, la licencia actual será revocada de forma inmediata. " +
+                                "Para continuar usando la aplicación, deberá contactar a TDS para obtener una nueva licencia.\n\n" +
+                                "Sitio: https://www.tds.cl\n" +
+                                "Teléfono: +56 2 2236 0727\n" +
+                                "Email: contacto@tds.cl"
+                    , color = AzulOscuro)
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            mostrarResetLicencia = false
+                            scope.launch {
+                                resetLicencia(context, navController)  // 👈 limpia y navega a "licencia"
+                            }
+                        }
+                    ) {
+                        Text("Confirmar", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarResetLicencia = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                },
+                containerColor = Color.White
+            )
+        }
+
 
     }
 
@@ -303,11 +340,13 @@ fun ConfirmacionResetDialog(
                 }
             },
             title = { Text("Confirmar reinicio") },
-            text = { Text("¿Estás seguro que quieres borrar todo y comenzar desde cero?") },
+            text = { Text("¿Estás seguro que quieres borrar todo y comenzar desde cero?", color = AzulOscuro) },
             containerColor = Color.White
         )
     }
+
 }
+
 suspend fun resetLicencia(context: Context, navController: NavController) {
     context.dataStore.edit { it.clear() }
     navController.navigate("licencia") {

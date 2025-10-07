@@ -23,7 +23,21 @@ import com.example.inventariotds.ui.theme.AzulOscuro
 import com.example.inventariotds.ui.theme.Blanco
 import com.example.inventariotds.ui.theme.BottomNavigationBar
 import com.example.inventariotds.viewmodel.InventarioViewModel
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.text.googlefonts.Font as GFont
 
+// Proveedor de Google Play Services
+val provider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
+// Familia Open Sans descargable
+val openSansFamily = FontFamily(
+    GFont(GoogleFont("Open Sans"), provider)
+)
 @Composable
 fun ListaProductosScreen(navController: NavHostController) {
     val context = LocalContext.current
@@ -31,6 +45,7 @@ fun ListaProductosScreen(navController: NavHostController) {
         viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
     )
     var query by remember { mutableStateOf(TextFieldValue("")) }
+
 
     // Cargar productos inventariados cada vez que abre la pantalla
     LaunchedEffect(Unit) {
@@ -64,10 +79,11 @@ fun ListaProductosScreen(navController: NavHostController) {
             painter = painterResource(id = R.drawable.sello_agua_tds),
             contentDescription = "Logo tds",
             modifier = Modifier
+                .align(Alignment.CenterHorizontally)
                 .height(20.dp)
         )
 
-        Text("Listado de Productos", style = MaterialTheme.typography.headlineMedium, color = Amarillo)
+        Text("LISTADO DE PRODUCTOS", style = MaterialTheme.typography.headlineMedium, color = Amarillo,     fontFamily = openSansFamily )
 
         OutlinedTextField(
             value = query,

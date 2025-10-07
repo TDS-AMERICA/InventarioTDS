@@ -36,22 +36,31 @@ fun FuncionarioScreen(navController: NavHostController) {
         modifier = Modifier
             .fillMaxSize()
             .background(AzulOscuro)
+            .padding(32.dp)
+    ) {
+        // 🔝 Solo este queda arriba
+        Image(
+            painter = painterResource(id = R.drawable.sello_agua_tds),
+            contentDescription = "Logo tds",
+            modifier = Modifier
+                .height(20.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AzulOscuro)
             .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
-            painter = painterResource(id = R.drawable.sello_agua_tds),
-            contentDescription = "Logo tds",
-            modifier = Modifier
-                .height(60.dp)
-                .padding(bottom = 30.dp)
-        )
-        Image(
             painter = painterResource(id = R.drawable.logo_invent),
             contentDescription = "Logo invent",
             modifier = Modifier
                 .height(60.dp)
+                .align(Alignment.CenterHorizontally)
                 .padding(bottom = 10.dp)
         )
 
@@ -90,4 +99,5 @@ fun FuncionarioScreen(navController: NavHostController) {
             Text("Ingresar", color = AzulOscuro, fontSize = 16.sp)
         }
     }
+}
 }

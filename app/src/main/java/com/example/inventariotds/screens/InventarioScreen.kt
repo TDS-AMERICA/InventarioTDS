@@ -36,6 +36,85 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.inventariotds.R
+import android.app.DatePickerDialog
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.remember
+import java.util.Calendar
+import androidx.compose.material3.LocalTextStyle
+
+
+@Composable
+fun DateInputField(
+    label: String,
+    value: String,
+    onDateSelected: (String) -> Unit,
+    enabled: Boolean = true
+) {
+    val context = LocalContext.current
+
+    val initialCal = remember(value) {
+        val cal = Calendar.getInstance()
+        val rx = Regex("""^(\d{2})/(\d{2})/(\d{4})$""")
+        rx.matchEntire(value)?.let { m ->
+            val (d, mth, y) = m.destructured
+            cal.set(y.toInt(), mth.toInt() - 1, d.toInt())
+        }
+        cal
+    }
+
+    fun openPicker() {
+        val y = initialCal.get(Calendar.YEAR)
+        val m = initialCal.get(Calendar.MONTH)
+        val d = initialCal.get(Calendar.DAY_OF_MONTH)
+        DatePickerDialog(context, { _, year, month, dayOfMonth ->
+            val selected = String.format(Locale.getDefault(), "%02d/%02d/%04d", dayOfMonth, month + 1, year)
+            onDateSelected(selected)
+        }, y, m, d).show()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { /* readOnly */ },
+            label = { Text(label, color = Blanco) },
+            textStyle = LocalTextStyle.current.copy(color = Blanco),
+            readOnly = true,
+            enabled = enabled,
+            trailingIcon = {
+                // Si no tienes un ícono, deja el emoji pero haciéndolo clickeable
+                Text(
+                    "📅",
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .clickable(enabled = enabled) { openPicker() },
+                    color = Blanco
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Capa clickeable del tamaño del TextField
+        Spacer(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(
+                    enabled = enabled,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { openPicker() }
+        )
+    }
+}
+
+private fun ahoraFechaHora(): String =
+    java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
+        .format(java.util.Date())
 
 @Composable
 fun InventarioScreen(navController: NavHostController) {
@@ -66,6 +145,7 @@ fun InventarioScreen(navController: NavHostController) {
     val focusRequesters = remember { campos.associateWith { FocusRequester() } }
     var barrido by remember { mutableStateOf(false) }
 
+
     LaunchedEffect(Unit) {
         viewModel.cargarInventariados(context)
         // Resto de inicialización
@@ -73,6 +153,15 @@ fun InventarioScreen(navController: NavHostController) {
             estadoInputs[campo] = ""
         }
     }
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarInventariados(context)
+        campos.forEach { campo -> estadoInputs[campo] = "" }
+
+        // ✅ setea valor por defecto para "Fecha de ingreso"
+        estadoInputs["Fecha de ingreso"] = ahoraFechaHora()
+    }
+
 
     // Autocompletar Descripción al ingresar Código de barras
     LaunchedEffect(estadoInputs["Código de barras"]) {
@@ -119,6 +208,7 @@ fun InventarioScreen(navController: NavHostController) {
                 painter = painterResource(id = R.drawable.sello_agua_tds),
                 contentDescription = "Logo tds",
                 modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
                     .height(20.dp)
             )
 
@@ -126,6 +216,7 @@ fun InventarioScreen(navController: NavHostController) {
                 painter = painterResource(id = R.drawable.inventario),
                 contentDescription = "inventario",
                 modifier = Modifier.padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
                     .height(80.dp)
             )
             /*Text(
@@ -139,25 +230,68 @@ fun InventarioScreen(navController: NavHostController) {
 
             campos.forEachIndexed { index, campo ->
                 val mostrarCampo = configuracion.getBoolean(campo, true)
-                if (mostrarCampo) {
-                    val esFechaIngreso = campo == "Fecha de ingreso"
-                    val value = when {
-                        campo == "Ubicación" && fijarUbicacion -> ubicacionFijada
-                        esFechaIngreso && estadoInputs[campo].isNullOrBlank() -> {
-                            SimpleDateFormat(
-                                "dd/MM/yyyy HH:mm:ss",
-                                Locale.getDefault()
-                            ).format(Date()).also {
-                                estadoInputs[campo] = it
-                            }
-                        }
+                if (!mostrarCampo) return@forEachIndexed
 
-                        else -> estadoInputs[campo] ?: ""
+                val esFechaIngreso = campo == "Fecha de ingreso"
+                val imeAction = if (index == campos.lastIndex) ImeAction.Done else ImeAction.Next
+                val enabledBase = !esFechaIngreso
+
+                when (campo) {
+                    "Fecha de vencimiento", "Fecha de fabricación" -> {
+                        DateInputField(
+                            label = campo,
+                            value = estadoInputs[campo] ?: "",
+                            onDateSelected = { estadoInputs[campo] = it },
+                            enabled = true // estos deben estar habilitados
+                        )
                     }
-                    val imeAction =
-                        if (index == campos.lastIndex) ImeAction.Done else ImeAction.Next
 
-                    if (campo == "Ubicación") {
+                    "Fecha de ingreso" -> {
+                        // Solo mostrar (readonly), sin abrir picker
+                        if (estadoInputs[campo].isNullOrBlank()) {
+                            estadoInputs[campo] = ahoraFechaHora()
+                        }
+                        OutlinedTextField(
+                            value = estadoInputs[campo] ?: "",
+                            onValueChange = {},
+                            label = { Text(campo, color = Blanco) },
+                            textStyle = LocalTextStyle.current.copy(color = Blanco),
+                            singleLine = true,
+                            readOnly = true,
+                            enabled = false, // grisado
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+
+                    "Cantidad" -> {
+                        OutlinedTextField(
+                            value = estadoInputs[campo] ?: "",
+                            onValueChange = {
+                                estadoInputs[campo] = it
+                                // tu validación numérica...
+                            },
+                            label = { Text(campo, color = Blanco) },
+                            textStyle = LocalTextStyle.current.copy(color = Blanco),
+                            singleLine = true,
+                            enabled = enabledBase,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = imeAction
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                                onDone = { focusManager.clearFocus() }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .focusRequester(focusRequesters[campo]!!)
+                        )
+                    }
+
+                    "Ubicación" -> {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -165,11 +299,7 @@ fun InventarioScreen(navController: NavHostController) {
                                     .fillMaxWidth()
                                     .padding(bottom = 4.dp)
                             ) {
-                                Text(
-                                    text = campo,
-                                    color = Blanco,
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Text(text = campo, color = Blanco, modifier = Modifier.weight(1f))
                                 Checkbox(
                                     checked = fijarUbicacion,
                                     onCheckedChange = { isChecked ->
@@ -194,7 +324,6 @@ fun InventarioScreen(navController: NavHostController) {
                                 onValueChange = {
                                     if (!fijarUbicacion) {
                                         estadoInputs[campo] = it
-                                        errorUbicacion = it.isBlank()
                                     }
                                 },
                                 modifier = Modifier
@@ -203,90 +332,37 @@ fun InventarioScreen(navController: NavHostController) {
                                     .focusRequester(focusRequesters[campo]!!),
                                 textStyle = LocalTextStyle.current.copy(color = Blanco),
                                 singleLine = true,
-                                enabled = !fijarUbicacion,
+                                enabled = enabledBase && !fijarUbicacion,
                                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(
                                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                                ),
-                                isError = errorUbicacion
-                            )
-                            if (errorUbicacion) {
-                                Text(
-                                    "El campo Ubicación no puede estar vacío.",
-                                    color = Color.Red,
-                                    style = MaterialTheme.typography.bodySmall
                                 )
-                            }
-                        }
-                    } else if (campo == "Cantidad") {
-                        // Validación SOLO para cantidad
-                        OutlinedTextField(
-                            value = estadoInputs[campo] ?: "",
-                            onValueChange = {
-                                estadoInputs[campo] = it
-                                errorCantidad = it.isNotBlank() && it.any { c -> !c.isDigit() }
-                            },
-                            label = { Text(campo, color = Blanco) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .focusRequester(focusRequesters[campo]!!),
-                            textStyle = LocalTextStyle.current.copy(color = Blanco),
-                            singleLine = true,
-                            enabled = when {
-                                campo == "Cantidad" && barrido -> false
-                                esFechaIngreso -> false
-                                else -> true
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = imeAction
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) },
-                                onDone = { focusManager.clearFocus() }
-                            ),
-                            isError = errorCantidad
-                        )
-                        if (errorCantidad) {
-                            Text(
-                                "Solo se permiten números en este campo",
-                                color = androidx.compose.ui.graphics.Color.Red,
-                                style = MaterialTheme.typography.bodySmall
                             )
                         }
-                    } else {
-                        if (campo == "Cantidad" && barrido && estadoInputs[campo].isNullOrBlank()) {
-                            estadoInputs[campo] = "1"
-                        }
+                    }
 
+                    else -> {
                         OutlinedTextField(
                             value = estadoInputs[campo] ?: "",
                             onValueChange = { estadoInputs[campo] = it },
                             label = { Text(campo, color = Blanco) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .focusRequester(focusRequesters[campo]!!),
                             textStyle = LocalTextStyle.current.copy(color = Blanco),
                             singleLine = true,
-                            enabled = when {
-                                campo == "Cantidad" && barrido -> false
-                                esFechaIngreso -> false
-                                else -> true
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = imeAction
-                            ),
+                            enabled = enabledBase,
+                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = imeAction),
                             keyboardActions = KeyboardActions(
                                 onNext = { focusManager.moveFocus(FocusDirection.Down) },
                                 onDone = { focusManager.clearFocus() }
                             ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .focusRequester(focusRequesters[campo]!!)
                         )
                     }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 

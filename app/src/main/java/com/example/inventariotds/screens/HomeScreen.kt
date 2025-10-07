@@ -291,6 +291,7 @@ fun HomeScreen(navController: NavController) {
                 painter = painterResource(id = R.drawable.sello_agua_tds),
                 contentDescription = "Logo tds",
                 modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
                     .height(20.dp)
             )
             Row(
@@ -330,6 +331,7 @@ fun HomeScreen(navController: NavController) {
                 painter = painterResource(id = R.drawable.logo_invent),
                 contentDescription = "Logo invent",
                 modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
                     .height(40.dp)
             )
 
@@ -338,6 +340,7 @@ fun HomeScreen(navController: NavController) {
                 painter = painterResource(id = R.drawable.inicio),
                 contentDescription = "inicio",
                 modifier = Modifier.padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
                     .height(80.dp)
             )
 

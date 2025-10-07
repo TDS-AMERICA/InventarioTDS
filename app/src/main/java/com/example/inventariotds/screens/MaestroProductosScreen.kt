@@ -66,6 +66,7 @@ fun MaestroProductosScreen(navController: NavHostController) {
                 painter = painterResource(id = R.drawable.maestro),
                 contentDescription = "Maestro productos",
                 modifier = Modifier.padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
                     .height(80.dp)
             )
 

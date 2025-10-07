@@ -300,6 +300,7 @@ fun EstadisticasScreen(navController: NavHostController) {
                 painter = painterResource(id = R.drawable.estadisticas),
                 contentDescription = "Estadistica",
                 modifier = Modifier.padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
                     .height(80.dp)
             )
             /*Text(
